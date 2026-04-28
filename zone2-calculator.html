@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zone 2 Heart Rate Calculator</title>
+<style>
+  :root {
+    --navy:   #1B2B4B;
+    --teal:   #0D9488;
+    --teal-l: #CCFBF1;
+    --amber:  #B45309;
+    --amber-l:#FEF9C3;
+    --z2:     #6366F1;
+    --z2-l:   #EEF2FF;
+    --bg:     #F8FAFC;
+    --card:   #FFFFFF;
+    --mid:    #475569;
+    --light:  #94A3B8;
+    --border: #E2E8F0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    min-height: 100vh;
+    padding: 32px 16px 72px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 { font-size: 1.65rem; font-weight: 800; color: var(--navy); }
+  .header p  { color: var(--mid); margin-top: 8px; font-size: 0.9rem; line-height: 1.6; max-width: 540px; margin-left: auto; margin-right: auto; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+  }
+  .card h2 { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 20px; letter-spacing: 0.01em; }
+
+  /* Inputs */
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .field-grid { grid-template-columns: 1fr; } }
+
+  .field label {
+    display: block; font-size: 0.75rem; font-weight: 700; color: var(--mid);
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 1.15rem; font-weight: 700; color: var(--navy); background: var(--bg);
+    outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--z2); }
+  .field .hint { font-size: 0.75rem; color: var(--light); margin-top: 5px; line-height: 1.4; }
+  .field .calc { font-size: 0.75rem; color: var(--teal); margin-top: 5px; font-weight: 600; }
+
+  /* HRR summary row */
+  .hrr-row { display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  .stat {
+    flex: 1; min-width: 100px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .stat .s-label { font-size: 0.72rem; font-weight: 700; color: var(--light); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat .s-val   { font-size: 1.4rem; font-weight: 800; color: var(--navy); margin-top: 2px; }
+  .stat .s-sub   { font-size: 0.75rem; color: var(--mid); margin-top: 1px; }
+
+  /* Zone 2 hero */
+  .z2-hero {
+    background: var(--z2-l); border: 2px solid var(--z2);
+    border-radius: 14px; padding: 22px 24px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .z2-hero .z2-label { font-size: 0.8rem; font-weight: 700; color: var(--z2); text-transform: uppercase; letter-spacing: 0.06em; }
+  .z2-hero .z2-range { font-size: 2.4rem; font-weight: 900; color: var(--z2); line-height: 1; }
+  .z2-hero .z2-desc  { font-size: 0.85rem; color: var(--mid); line-height: 1.55; flex: 1; min-width: 180px; }
+  .z2-hero .z2-formula {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.78rem; color: var(--z2); margin-top: 6px;
+    background: white; border-radius: 6px; padding: 6px 10px;
+    border: 1px solid #A5B4FC; display: inline-block;
+  }
+
+  /* Zone table */
+  .zone-table { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .zone-row {
+    display: flex; align-items: center; padding: 11px 14px; gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .zone-row:last-child { border-bottom: none; }
+  .zone-row.is-z2 { background: var(--z2-l); }
+  .zone-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .zone-name { font-size: 0.88rem; font-weight: 700; flex: 1; }
+  .zone-pct  { font-size: 0.78rem; color: var(--light); width: 70px; text-align: right; }
+  .zone-bpm  { font-size: 0.95rem; font-weight: 700; width: 120px; text-align: right; }
+  .zone-row.is-z2 .zone-bpm { color: var(--z2); }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* Explainer sections */
+  .section-title { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+  .body-text { font-size: 0.875rem; color: var(--mid); line-height: 1.7; margin-bottom: 14px; }
+  .body-text strong { color: var(--navy); }
+  .formula-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.82rem; color: var(--navy); line-height: 1.9;
+    margin: 12px 0;
+  }
+  .tip-box {
+    border-radius: 10px; padding: 14px 16px; margin: 10px 0;
+    border-left: 4px solid;
+  }
+  .tip-box.blue  { background: #EFF6FF; border-color: #93C5FD; }
+  .tip-box.green { background: #F0FDF4; border-color: #86EFAC; }
+  .tip-box.amber { background: var(--amber-l); border-color: #FCD34D; }
+  .tip-box .tip-title { font-size: 0.8rem; font-weight: 700; margin-bottom: 5px; }
+  .tip-box.blue  .tip-title { color: #1E40AF; }
+  .tip-box.green .tip-title { color: #166534; }
+  .tip-box.amber .tip-title { color: var(--amber); }
+  .tip-box p { font-size: 0.83rem; color: var(--mid); line-height: 1.6; }
+
+  .method-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  @media (max-width: 480px) { .method-compare { grid-template-columns: 1fr; } }
+  .method-card { border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .method-card.hrmax { background: #F1F5F9; }
+  .method-card.hrr   { background: var(--z2-l); border-color: #A5B4FC; }
+  .method-card .mc-title { font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+  .method-card.hrmax .mc-title { color: var(--mid); }
+  .method-card.hrr   .mc-title { color: var(--z2); }
+  .method-card p { font-size: 0.81rem; color: var(--mid); line-height: 1.55; }
+  .badge { display: inline-block; background: var(--z2); color: white; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>Zone 2 Heart Rate Calculator</h1>
+    <p>Enter your details below to calculate your personalised Zone 2 training range using the Heart Rate Reserve (HRR) method.</p>
+  </div>
+
+  <!-- Inputs -->
+  <div class="card">
+    <h2>Your Details</h2>
+    <div class="field-grid">
+      <div class="field">
+        <label>Age</label>
+        <input type="number" id="age" value="42" min="18" max="90" oninput="calculate()">
+        <div class="hint">Used to estimate HRmax via Tanaka formula if no measured value</div>
+      </div>
+      <div class="field">
+        <label>Resting Heart Rate</label>
+        <input type="number" id="rhr" value="60" min="30" max="100" oninput="calculate()">
+        <div class="hint">Measure on waking, before getting out of bed — 3-day average is ideal</div>
+      </div>
+      <div class="field">
+        <label>Max Heart Rate</label>
+        <input type="number" id="hrmax" value="179" min="100" max="230" oninput="calculate()">
+        <div class="calc" id="tanaka-note">Tanaka estimate for age 42: 179 bpm</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card">
+    <h2>Your Results</h2>
+    <div class="hrr-row">
+      <div class="stat">
+        <div class="s-label">HRmax</div>
+        <div class="s-val" id="out-hrmax">179 bpm</div>
+        <div class="s-sub">Maximum heart rate</div>
+      </div>
+      <div class="stat">
+        <div class="s-label">Resting HR</div>
+        <div class="s-val" id="out-rhr">60 bpm</div>
+        <div class="s-sub">At complete rest</div>
+      </div>
+      <div class="stat">
+        <div class="s-label">HRR</div>
+        <div class="s-val" id="out-hrr">119 bpm</div>
+        <div class="s-sub">Heart Rate Reserve</div>
+      </div>
+    </div>
+
+    <div class="z2-hero">
+      <div>
+        <div class="z2-label">Your Zone 2 Range</div>
+        <div class="z2-range" id="out-z2">108 – 131 bpm</div>
+        <div class="z2-formula" id="out-formula">60 + 40%×119 to 60 + 60%×119</div>
+      </div>
+      <div class="z2-desc">
+        Train in this range for endurance base building, fat oxidation, and cardiovascular health. You should be able to hold a full conversation at the lower end, and a short one at the upper end.
+      </div>
+    </div>
+
+    <div style="font-size:0.82rem; font-weight:600; color:var(--mid); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">All Zones (HRR Method)</div>
+    <div class="zone-table" id="zone-table"></div>
+  </div>
+
+  <!-- How to measure -->
+  <div class="card">
+    <div class="section-title">How to Measure Your Resting Heart Rate</div>
+    <p class="body-text">Your resting heart rate (RHR) is the number of times your heart beats per minute when you are completely at rest. It is one of the most accessible indicators of cardiovascular fitness — a lower RHR generally reflects a stronger, more efficient heart.</p>
+
+    <div class="tip-box green">
+      <div class="tip-title">Best Method</div>
+      <p>Measure first thing in the morning before getting out of bed. Lie still for 60 seconds, then count your pulse at your wrist (radial artery) or neck (carotid artery) for a full 60 seconds. Repeat on 3 consecutive days and average the values.</p>
+    </div>
+
+    <div class="tip-box blue">
+      <div class="tip-title">Using a Smartwatch or HR Monitor</div>
+      <p>Most modern smartwatches measure RHR automatically during sleep or rest. These give good estimates. Look for a "resting HR" or "morning HR" reading in your app. Wear the watch snugly to improve optical sensor accuracy.</p>
+    </div>
+
+    <p class="body-text" style="margin-top:12px;">Normal resting HR for adults is 60–100 bpm. A well-trained endurance athlete may have an RHR of 40–50 bpm. A high RHR (>90 bpm consistently) may warrant a conversation with your doctor.</p>
+
+    <div class="divider"></div>
+
+    <div class="section-title">How to Measure Your Maximum Heart Rate</div>
+    <p class="body-text">Your maximum heart rate (HRmax) is the highest number of beats per minute your heart can achieve during maximal exertion. It declines slightly with age and varies significantly between individuals.</p>
+
+    <div class="tip-box amber">
+      <div class="tip-title">Tanaka Formula (Default — Age-Based Estimate)</div>
+      <p><strong>HRmax = 208 − (0.7 × age)</strong><br>
+      This is the most validated age-based formula (Tanaka et al., JACC 2001). It is more accurate than the older 220 − age formula, particularly for older and fitter adults. It is a population average — your actual HRmax may differ by ±10–15 bpm.</p>
+    </div>
+
+    <div class="tip-box green">
+      <div class="tip-title">Measured Value (More Accurate)</div>
+      <p>A true HRmax can be measured during a maximal exercise test — typically a graded treadmill or cycle ergometer test supervised by a sports physician or cardiologist. During an all-out 2–3 minute effort (e.g. a hard sprint finish in a race), your heart rate may also approach true HRmax. Use the highest HR value you have reliably recorded during intense exercise as an approximation.</p>
+    </div>
+  </div>
+
+  <!-- Two methods explainer -->
+  <div class="card">
+    <div class="section-title">Why HRR Method — Not % HRmax?</div>
+    <p class="body-text">There are two common ways to calculate heart rate training zones. The HRR method is recommended for most people because it accounts for how fit you are at baseline.</p>
+
+    <div class="method-compare">
+      <div class="method-card hrmax">
+        <div class="mc-title">% HRmax Method</div>
+        <p>Zone 2 = 64–76% of your maximum heart rate. Simple and widely used. Does not account for your resting heart rate — so two people with very different fitness levels get identical zones.</p>
+      </div>
+      <div class="method-card hrr">
+        <div class="mc-title">HRR Method (Karvonen)</div>
+        <p>Zone 2 = Resting HR + 40–60% of your Heart Rate Reserve. Uses your actual working range of heart rate. A fitter person with a lower resting HR gets a wider, appropriately calibrated zone.</p>
+        <div class="badge">Recommended</div>
+      </div>
+    </div>
+
+    <div class="formula-block">
+      HRR = HRmax − Resting HR<br>
+      Zone 2 lower  =  Resting HR + (40% × HRR)<br>
+      Zone 2 upper  =  Resting HR + (60% × HRR)
+    </div>
+
+    <p class="body-text">Example: Two people, both with HRmax 180. Person A has a resting HR of 40 bpm (well-trained); Person B has 75 bpm (sedentary). The % HRmax method gives both the same Zone 2: 115–137 bpm. The HRR method correctly gives Person A: 112–148 bpm and Person B: 102–129 bpm — reflecting their very different physiology.</p>
+
+    <p class="body-text">The HRR method is not perfect — the only way to confirm true metabolic thresholds is a laboratory lactate or gas exchange test. But as a practical field method for setting training targets, HRR is meaningfully more accurate than % HRmax.</p>
+  </div>
+
+</div>
+
+<script>
+const ZONE_DEFS = [
+  { name: "Very Low (Recovery)", dot: "#CBD5E1", hrrLo: 0.00, hrrHi: 0.30 },
+  { name: "Zone 1 — Easy",       dot: "#93C5FD", hrrLo: 0.30, hrrHi: 0.40 },
+  { name: "Zone 2 — Moderate",   dot: "#6366F1", hrrLo: 0.40, hrrHi: 0.60, isZ2: true },
+  { name: "Zone 3–4 — Hard",     dot: "#F97316", hrrLo: 0.60, hrrHi: 0.85 },
+  { name: "Zone 5 — Maximal",    dot: "#DC2626", hrrLo: 0.85, hrrHi: 1.00 },
+];
+
+// HRmax pct equivalent labels for reference
+const PCT_LABELS = ["<50%", "50–64%", "64–76%", "76–95%", "≥95%"];
+
+function tanaka(age) { return Math.round(208 - 0.7 * age); }
+
+function calculate() {
+  const age   = parseInt(document.getElementById('age').value)   || 42;
+  const rhr   = parseInt(document.getElementById('rhr').value)   || 60;
+  const hrmax = parseInt(document.getElementById('hrmax').value) || tanaka(age);
+  const hrr   = hrmax - rhr;
+
+  // Update Tanaka hint
+  const tk = tanaka(age);
+  document.getElementById('tanaka-note').textContent = `Tanaka estimate for age ${age}: ${tk} bpm`;
+
+  // Stats
+  document.getElementById('out-hrmax').textContent = hrmax + ' bpm';
+  document.getElementById('out-rhr').textContent   = rhr   + ' bpm';
+  document.getElementById('out-hrr').textContent   = hrr   + ' bpm';
+
+  // Zone 2
+  const z2Lo = Math.round(rhr + 0.40 * hrr);
+  const z2Hi = Math.round(rhr + 0.60 * hrr);
+  document.getElementById('out-z2').textContent = `${z2Lo} – ${z2Hi} bpm`;
+  document.getElementById('out-formula').textContent =
+    `${rhr} + 40%×${hrr} to ${rhr} + 60%×${hrr}`;
+
+  // Zone table
+  const table = document.getElementById('zone-table');
+  table.innerHTML = '';
+  ZONE_DEFS.forEach((z, i) => {
+    const lo = Math.round(rhr + z.hrrLo * hrr);
+    const hi = Math.round(rhr + z.hrrHi * hrr);
+    const bpmStr = z.hrrLo === 0 ? `< ${hi} bpm` : `${lo} – ${hi} bpm`;
+    const row = document.createElement('div');
+    row.className = 'zone-row' + (z.isZ2 ? ' is-z2' : '');
+    row.innerHTML = `
+      <div class="zone-dot" style="background:${z.dot}"></div>
+      <div class="zone-name">${z.name}</div>
+      <div class="zone-pct">${PCT_LABELS[i]}</div>
+      <div class="zone-bpm">${bpmStr}</div>
+    `;
+    table.appendChild(row);
+  });
+}
+
+// Sync HRmax field with Tanaka when age changes, unless user has manually edited hrmax
+document.getElementById('age').addEventListener('input', function() {
+  const age = parseInt(this.value) || 42;
+  document.getElementById('hrmax').value = tanaka(age);
+  calculate();
+});
+
+calculate();
+</script>
+</body>
+</html>
